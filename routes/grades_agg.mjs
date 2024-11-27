@@ -229,4 +229,11 @@ router.get("/stats/:id", async (req, res) => {
   if (!result) res.send("Not found").status(404);
   else res.send({totalLearners, learnersAbove70, percentageAbove70}).status(200)
 });
+async function createIndexes() {
+  const collection = await db.collection("grades");
+  await collection.createIndex({ class_id: 1});
+  await collection.createIndex({ learner_id: 1});
+  await collection.createIndex({ learner_id: 1, class_id: 1});
+}
+createIndexes();
 export default router;
