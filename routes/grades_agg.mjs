@@ -236,7 +236,7 @@ async function createIndexes() {
   await collection.createIndex({ learner_id: 1, class_id: 1});
 }
 createIndexes();
-db.createCollection("grades", {
+db.createCollection("newGrades", {
   validator: {
     $jsonSchema: {
       bsonType: "object",
@@ -245,7 +245,7 @@ db.createCollection("grades", {
       properties: {
         class_id: {
           bsonType: "int",
-          minimuum: 0,
+          minimum: 0,
           maximum: 300,
           description: "Must be inbetween 0 to 300"
         },
