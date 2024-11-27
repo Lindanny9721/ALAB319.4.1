@@ -146,4 +146,87 @@ router.get("/stats", async (req, res) => {
   if (!result) res.send("Not found").status(404);
   else res.send({totalLearners, learnersAbove70, percentageAbove70}).status(200)
 });
+router.get("/stats/:id", async (req, res) => {
+  let collection = await db.collection("grades");
+
+  let result = await collection
+    .aggregate([
+      {
+        $match: { class_id: Number(req.params.id) },
+      },
+      {
+        $unwind: { path: "$scores" },
+      },
+      {
+        $group: {
+          _id: "$learner_id",
+          quiz: {
+            $push: {
+              $cond: {
+                if: { $eq: ["$scores.type", "quiz"] },
+                then: "$scores.score",
+                else: "$$REMOVE",
+              },
+            },
+          },
+          exam: {
+            $push: {
+              $cond: {
+                if: { $eq: ["$scores.type", "exam"] },
+                then: "$scores.score",
+                else: "$$REMOVE",
+              },
+            },
+          },
+          homework: {
+            $push: {
+              $cond: {
+                if: { $eq: ["$scores.type", "homework"] },
+                then: "$scores.score",
+                else: "$$REMOVE",
+              },
+            },
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 1,
+          avg: {
+            $sum: [
+              { $multiply: [{ $avg: "$exam" }, 0.5] },
+              { $multiply: [{ $avg: "$quiz" }, 0.3] },
+              { $multiply: [{ $avg: "$homework" }, 0.2] },
+            ],
+          },
+        },
+      },
+      {
+        $match: {
+          avg: { $gte: 70 },
+        },
+      },
+    ])
+    .toArray();
+  const totalLearnersInClass = await collection
+    .aggregate([
+      {
+        $match: { class_id: Number(req.params.id) },
+      },
+      {
+        $group: {
+          _id: "$learner_id",
+        },
+      },
+      {
+        $count: "learnerInClass",
+      },
+    ])
+    .toArray();
+  const totalLearners = totalLearnersInClass.length > 0 ? totalLearnersInClass[0].learnerInClass : 0;
+  const learnersAbove70 = result.length;
+  const percentageAbove70 = (learnersAbove70 / totalLearners) * 100;
+  if (!result) res.send("Not found").status(404);
+  else res.send({totalLearners, learnersAbove70, percentageAbove70}).status(200)
+});
 export default router;
